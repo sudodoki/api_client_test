@@ -15,8 +15,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="foundation.css">
 </head>
-  <body>
-  
+  <body ng-app='matchApp'>
   <nav class="top-bar" data-topbar>
     <ul class="title-area">
       <li class="name">
@@ -32,79 +31,93 @@
       </ul>
     </section>
   </nav>
-
-    <div id="login">
+  <div ng-view></div>
+    <script type="text/ng-template" id='view/login'>
+      <div id="login">
+          <div class="row">
+            <div class="column small-offset-1 small-10 large-offset-2 large-8">
+              <h1>Login</h1>
+              <form method="post" action="http://localhost:8888/login" class="small-8">
+                <input class="error" name="login" type="text" placeholder="enter your login">
+                <small class="error">Something went wrong!</small>
+                <input name="password" type="password" placeholder="enter your password">
+                <input type="submit" value="Log me in" class="button">
+                <a href="/signup" class="button secondary">Sign me up</a>
+              </form>
+            </div>
+          </div>
+      </div>
+    </script>
+    <script type="text/ng-template" id='view/signup'>
+      <div id="signup">
         <div class="row">
           <div class="column small-offset-1 small-10 large-offset-2 large-8">
-            <h1>Login</h1>
-            <form method="post" action="http://localhost:8888/login" class="small-8">
+            <h1>Signup</h1>
+            <form method="post" action="http://localhost:8888/signup" class="small-8">
               <input class="error" name="login" type="text" placeholder="enter your login">
               <small class="error">Something went wrong!</small>
-              <input name="password" type="password" placeholder="enter your password">
-              <input type="submit" value="Log me in" class="button">
-              <a href="/signup" class="button secondary">Sign me up</a>
+              <input name="email" type="email" placeholder="enter your email">
+              <input name="password" type="password" placeholder="enter your new password">
+              <input name="passwordConfirmation" type="password" placeholder="retype it">
+              <input type="submit" value="Let me in!" class="button">
+              <a href="/login" class="button secondary">Nah, I do have an account already.</a>
             </form>
           </div>
         </div>
-    </div>
-    <hr>
-    <div id="signup">
-      <div class="row">
-        <div class="column small-offset-1 small-10 large-offset-2 large-8">
-          <h1>Signup</h1>
-          <form method="post" action="http://localhost:8888/signup" class="small-8">
-            <input class="error" name="login" type="text" placeholder="enter your login">
-            <small class="error">Something went wrong!</small>
-            <input name="email" type="email" placeholder="enter your email">
-            <input name="password" type="password" placeholder="enter your new password">
-            <input name="passwordConfirmation" type="password" placeholder="retype it">
-            <input type="submit" value="Let me in!" class="button">
-            <a href="/login" class="button secondary">Nah, I do have an account already.</a>
-          </form>
-        </div>
       </div>
-    </div>
-    <hr>
-    <div id="list">
-      <ul class="small-block-grid-3">
-      <li>
-        <div class="person male">
-          <a class='url n' href="#show-full"><i>Mr.</i> Know-it-all, I</a>
-        </div>
-      </li>
-      <li>
-        <div class="person female">
-          <a class='url n' href="#show-full"><i>Mrs.</i> Did-it, Been-there</a>
-        </div>
-      </li>
-      <li>
-        <div class="person male">
-          <a class='url n' href="#show-full"><i>Mr.</i> Real Fun.</a>
-        </div>
-      </li>
-      </ul>
-    </div>
-    <hr>
-    <div id="show-full">
-      <div>
-      <img src="ajax-loader.gif" alt="AJAX loader animation">
-      <h2>Mr. Know-it-all, I</h2>
-      <section>
-        <h3>Location</h3>
-        Street: 1212 mullholand drive, hollywood, LA, 12312
-      </section>
-      <section>
-        <h3>Connect with him!</h3>
-        <a href="mailto:knowitall@whitehouse.gov">knowitall@whitehouse.gov</a>
+    </script>
+    <script type="text/ng-template" id='view/list'>
+      <div id="list">
+        <ul class="small-block-grid-3">
+        <li>
+          <div class="person male">
+            <a class='url n' href="#show-full"><i>Mr.</i> Know-it-all, I</a>
+          </div>
+        </li>
+        <li>
+          <div class="person female">
+            <a class='url n' href="#show-full"><i>Mrs.</i> Did-it, Been-there</a>
+          </div>
+        </li>
+        <li>
+          <div class="person male">
+            <a class='url n' href="#show-full"><i>Mr.</i> Real Fun.</a>
+          </div>
+        </li>
+        </ul>
+      </div>
+    </script>
 
-        <br/>
-        <a href="tel:38(098)#102">38(098)9991613</a>
-      </section>
+    <script type="text/ng-template" id='view/show-full'>
+      <div id="show-full">
+        <div>
+        <img src="ajax-loader.gif" alt="AJAX loader animation">
+        <h2>Mr. Know-it-all, I</h2>
+        <section>
+          <h3>Location</h3>
+          Street: 1212 mullholand drive, hollywood, LA, 12312
+        </section>
+        <section>
+          <h3>Connect with him!</h3>
+          <a href="mailto:knowitall@whitehouse.gov">knowitall@whitehouse.gov</a>
+
+          <br/>
+          <a href="tel:38(098)#102">38(098)9991613</a>
+        </section>
+        </div>
       </div>
-    </div>
+    </script>
     <!--[if lt IE 7]><script src="//ajax.googleapis.com/ajax/libs/chrome-frame/1.0.3/CFInstall.min.js"></script><script>window.attachEvent('onload',function(){CFInstall.check({mode:'overlay'})})</script><![endif]-->
    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-  </body>
+   <script src='bower_components/angular/angular.js'></script>
+   <script src='bower_components/angular-route/angular-route.js'></script>
+   <script>
+   angular.module('matchApp', ['ngRoute'])
+    .config(function($routeProvider){
+      $routeProvider.when('/',{templateUrl: 'view/login' })
+    })
+   </script>
+  </body> 
 </html>
 
 <!-- <div id="your section">
