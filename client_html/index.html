@@ -69,21 +69,13 @@
     <script type="text/ng-template" id='view/list'>
       <div id="list">
         <ul class="small-block-grid-3">
-        <li>
-          <div class="person male">
-            <a class='url n' href="#show-full"><i>Mr.</i> Know-it-all, I</a>
-          </div>
-        </li>
-        <li>
-          <div class="person female">
-            <a class='url n' href="#show-full"><i>Mrs.</i> Did-it, Been-there</a>
-          </div>
-        </li>
-        <li>
-          <div class="person male">
-            <a class='url n' href="#show-full"><i>Mr.</i> Real Fun.</a>
-          </div>
-        </li>
+          <li ng-repeat='user in users' >
+            <div class="person">
+              <a class='url n' href="#show-full/{{user._id}}">
+              <img src="{{user.avatar}}" alt="{{user.login }} avatar">
+                {{user.login}}</a>
+            </div>
+          </li>
         </ul>
       </div>
     </script>
@@ -123,25 +115,41 @@
           templateUrl: 'view/signup',
           controller: 'SignupCtrl'
         })
+        .when('/list',{
+          templateUrl: 'view/list',
+          controller: 'ListCtrl'
+        })
       $routeProvider.otherwise('/login')
     })
     .constant('API_URL', 'http://www.jscacourse.co.vu:3000')
-    .controller('SignupCtrl', function($scope, $http, API_URL) {
+    .controller('ListCtrl', function($scope, $http, API_URL) {
+      $scope.users = [];
+      $http.get(API_URL + '/user').then(function(response){
+        $scope.users = response.data
+      })
+    })
+    .controller('SignupCtrl', function($scope, $http, API_URL, $rootScope) {
       $scope.user = {}
+      console.log($rootScope.token)
       $scope.handleSignup = function(user, $event) {
         $http.post(API_URL + '/signup', user).then(
-          function(data){console.log('success ', data)},
+          function(response){
+            $rootScope.token = JSON.parse(JSON.parse(response.data)).token
+          },
           function(error){console.log('error ', error)}
         )
       }
     })
-    .controller('LoginCtrl', function($scope, $http, API_URL){
+    .controller('LoginCtrl', function($scope, $http, API_URL, $rootScope){
       $scope.user = {}
+      console.log($rootScope.token)
       $scope.handleLogin = function(user, $event) {
         $http.post(API_URL + '/signin', user).then(
-          function(data){console.log('success ', data)},
+          function(response){
+            $rootScope.token = JSON.parse(JSON.parse(response.data)).token
+          },
           function(error){console.log('error ', error)}
-        )
+        ).then(function(){console.log('$rootScope.token ', $rootScope.token)})
       }
       return 0
     })
