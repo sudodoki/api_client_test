@@ -1,0 +1,17 @@
+API SPEC
+	+	POST /singup
+			login, pass, passConfirmation
+	+	POST /signin
+			login, pass
+	+	GET  /user/
+			list of users with published = true
+	- # TOKEN AUTHORIZATION
+	+ GET  /user/me
+		have info on current user
+	+ GET  /users/:id
+		see info on selected users
+	+ POST  /users/me
+		update info on current user
+	+ POST /users/me/avatar
+		update current user's avatar
+

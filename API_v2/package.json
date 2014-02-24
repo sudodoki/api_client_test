@@ -1,0 +1,20 @@
+{
+  "name": "API_v2",
+  "version": "0.0.0",
+  "description": "Sample API used for training APPs on Kottans' JS Course (AKA JS CA COURSE)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "API",
+    "RESTIFY",
+    "MATCH.COM"
+  ],
+  "author": "sudodoki <smd.deluzion@gmail.com> (http://sudodoki.name/)",
+  "license": "MIT",
+  "dependencies": {
+    "mongojs": "~0.10.0",
+    "restify": "~2.6.1"
+  }
+}
