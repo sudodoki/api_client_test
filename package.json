@@ -1,0 +1,17 @@
+{
+  "name": "angular-match",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "tiny-lr": "0.0.5",
+    "gulp": "~3.2.0",
+    "express": "~3.4.7",
+    "gulp-util": "~2.2.0"
+  },
+  "author": "",
+  "license": "BSD-2-Clause"
+}
