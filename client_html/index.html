@@ -37,12 +37,12 @@
           <div class="row">
             <div class="column small-offset-1 small-10 large-offset-2 large-8">
               <h1>Login</h1>
-              <form method="post" action="http://localhost:8888/login" class="small-8">
-                <input class="error" name="login" type="text" placeholder="enter your login">
-                <small class="error">Something went wrong!</small>
-                <input name="password" type="password" placeholder="enter your password">
+              {{ user }}
+              <form ng-submit='handleLogin(user)' class="small-8">
+                <input ng-model='user.login' name="login" type="text" placeholder="enter your login">
+                <input ng-model='user.password' name="password" type="password" placeholder="enter your password">
                 <input type="submit" value="Log me in" class="button">
-                <a href="/signup" class="button secondary">Sign me up</a>
+                <a href="#/signup" class="button secondary">Sign me up</a>
               </form>
             </div>
           </div>
@@ -53,14 +53,14 @@
         <div class="row">
           <div class="column small-offset-1 small-10 large-offset-2 large-8">
             <h1>Signup</h1>
-            <form method="post" action="http://localhost:8888/signup" class="small-8">
-              <input class="error" name="login" type="text" placeholder="enter your login">
-              <small class="error">Something went wrong!</small>
-              <input name="email" type="email" placeholder="enter your email">
-              <input name="password" type="password" placeholder="enter your new password">
-              <input name="passwordConfirmation" type="password" placeholder="retype it">
+            <form ng-submit='handleSignup(user)' class="small-8">
+              <input ng-model='user.login' name="login" type="text" placeholder="enter your login">
+              <!-- <small class="error">Something went wrong!</small> -->
+              <input ng-model='user.email' name="email" type="email" placeholder="enter your email">
+              <input ng-model='user.password' name="password" type="password" placeholder="enter your new password">
+              <input ng-model='user.passwordConfirmation' name="passwordConfirmation" type="password" placeholder="retype it">
               <input type="submit" value="Let me in!" class="button">
-              <a href="/login" class="button secondary">Nah, I do have an account already.</a>
+              <a href="#/login" class="button secondary">Nah, I do have an account already.</a>
             </form>
           </div>
         </div>
@@ -114,7 +114,36 @@
    <script>
    angular.module('matchApp', ['ngRoute'])
     .config(function($routeProvider){
-      $routeProvider.when('/',{templateUrl: 'view/login' })
+      $routeProvider
+        .when('/login',{
+          templateUrl: 'view/login',
+          controller: 'LoginCtrl'
+        })
+        .when('/signup',{
+          templateUrl: 'view/signup',
+          controller: 'SignupCtrl'
+        })
+      $routeProvider.otherwise('/login')
+    })
+    .constant('API_URL', 'http://www.jscacourse.co.vu:3000')
+    .controller('SignupCtrl', function($scope, $http, API_URL) {
+      $scope.user = {}
+      $scope.handleSignup = function(user, $event) {
+        $http.post(API_URL + '/signup', user).then(
+          function(data){console.log('success ', data)},
+          function(error){console.log('error ', error)}
+        )
+      }
+    })
+    .controller('LoginCtrl', function($scope, $http, API_URL){
+      $scope.user = {}
+      $scope.handleLogin = function(user, $event) {
+        $http.post(API_URL + '/signin', user).then(
+          function(data){console.log('success ', data)},
+          function(error){console.log('error ', error)}
+        )
+      }
+      return 0
     })
    </script>
   </body> 
