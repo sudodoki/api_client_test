@@ -165,7 +165,7 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
   source.on('end', function() {
     db.collection('users').findAndModify({
       query: { _id: req.user._id},
-      update: {$set: {avatar: server.url + '/avatars/' + filename}},
+      update: {$set: {avatar: 'avatars/' + filename}}, //workaround: UI should prepend http://hostname:port/
     }, function(err, doc, lastErrorObject) {
       if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') })}
       if (!doc) {return res.send(404, { error: 'User does not exist'})}
