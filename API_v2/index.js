@@ -140,16 +140,15 @@ server.get('/user', function (req, res, next) {
   })
 })
 
-server.get('/user/:id', forAuthorized, function (req, res, next) {
-  db.collection('users').findOne({ _id: mongojs.ObjectId(req.headers['secret-token']), is_published: "true"}, function(err, doc) {
+server.get('/user/:id', forAuthorized, setUser, function (req, res, next) {
+  if (req.params.id === 'me') {
+    return res.send(200, req.user);
+  }
+  db.collection('users').findOne({ _id: mongojs.ObjectId(req.params.id)}, function(err, doc) {
     if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') })}
     if (!doc) {return res.send(404, 'User does not exist')}
     return res.send(200, stripOut(doc))
   })
-})
-
-server.get('/user/me', forAuthorized, setUser, function (req, res, next) {
-  return res.send(200, req.user)
 })
 
 server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
