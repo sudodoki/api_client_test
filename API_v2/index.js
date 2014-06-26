@@ -50,9 +50,19 @@ server
   .pre(restify.pre.sanitizePath())
   .use(restify.bodyParser({keepExtensions: true}))
 
-server.get(/\/avatars\/?.*/, restify.serveStatic({
-  directory: './public'
-}));
+server.get(/\/avatars\/?.*/, function (req, res, next) {
+  var path = req.url.split('?')[0]; //resolve image caching
+  fs.readFile('.' + path, function (err, file) {
+    if (err) {
+      res.send(500);
+      return next();
+    }
+
+    res.write(file);
+    res.end();
+    return next();
+  });
+});
 
 server.on('NotFound', function(req, res, cb) {
   CORSHanlder(req, res, function(){
@@ -159,7 +169,7 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
   var extension = req.files.avatar.name.split('.').slice(-1)[0]
   var filename = req.user.login + '.' + extension
   var source = fs.createReadStream(req.files.avatar.path);
-  var dest = fs.createWriteStream('public/' + filename);
+  var dest = fs.createWriteStream('avatars/' + filename);
   source.pipe(dest);
   source.on('end', function() {
     db.collection('users').findAndModify({
