@@ -124,7 +124,7 @@ server.post('/signup', function (req, res, next) {
 
 server.get('/user', function (req, res, next) {
   console.log(req.method)
-  db.collection('users').find({is_published: "true"}, function (err, docs) {
+  db.collection('users').find({is_published: true}, function (err, docs) {
     if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') })}
     res.send(docs.map(stripOut))
   })
