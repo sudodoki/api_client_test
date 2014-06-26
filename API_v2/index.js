@@ -50,9 +50,19 @@ server
   .pre(restify.pre.sanitizePath())
   .use(restify.bodyParser({keepExtensions: true}))
 
-server.get(/\/avatars\/?.*/, restify.serveStatic({
-  directory: './public'
-}));
+server.get(/\/avatars\/?.*/, function (req, res, next) {
+  var path = req.url.split('?')[0]; //resolve image caching
+  fs.readFile('.' + path, function (err, file) {
+    if (err) {
+      res.send(500);
+      return next();
+    }
+
+    res.write(file);
+    res.end();
+    return next();
+  });
+});
 
 server.on('NotFound', function(req, res, cb) {
   CORSHanlder(req, res, function(){
@@ -93,15 +103,15 @@ server.post('/signup', function (req, res, next) {
       user = req.params;
   console.log('*** Sign up for: ', user)
   if (!(user.password)) {
-    errors.push({password: "Use at least some password"})
+    errors.push("Use at least some password");
   }
   if (!(user.password && user.passwordConfirmation && user.password === user.passwordConfirmation)) {
-    errors.push({passwordConfirmation: 'Should match password'})
+    errors.push('Should match password');
   }
   db.collection('users').find({login: user.login}, function (err, userDoc) {
     if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') })}
     if (userDoc.length > 0) {
-      errors.push({login: 'This login is already taken, sorry'})
+      errors.push('This login is already taken, sorry');
     }
     if (errors.length === 0) {
       db.collection('users').insert({
@@ -124,22 +134,21 @@ server.post('/signup', function (req, res, next) {
 
 server.get('/user', function (req, res, next) {
   console.log(req.method)
-  db.collection('users').find({is_published: "true"}, function (err, docs) {
+  db.collection('users').find({is_published: true}, function (err, docs) {
     if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') })}
     res.send(docs.map(stripOut))
   })
 })
 
-server.get('/user/:id', forAuthorized, function (req, res, next) {
-  db.collection('users').findOne({ _id: mongojs.ObjectId(req.headers['secret-token']), is_published: "true"}, function(err, doc) {
+server.get('/user/:id', forAuthorized, setUser, function (req, res, next) {
+  if (req.params.id === 'me') {
+    return res.send(200, req.user);
+  }
+  db.collection('users').findOne({ _id: mongojs.ObjectId(req.params.id), is_published: true }, function(err, doc) {
     if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') })}
     if (!doc) {return res.send(404, 'User does not exist')}
     return res.send(200, stripOut(doc))
   })
-})
-
-server.get('/user/me', forAuthorized, setUser, function (req, res, next) {
-  return res.send(200, req.user)
 })
 
 server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
@@ -160,12 +169,12 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
   var extension = req.files.avatar.name.split('.').slice(-1)[0]
   var filename = req.user.login + '.' + extension
   var source = fs.createReadStream(req.files.avatar.path);
-  var dest = fs.createWriteStream('public/' + filename);
+  var dest = fs.createWriteStream('avatars/' + filename);
   source.pipe(dest);
   source.on('end', function() {
     db.collection('users').findAndModify({
       query: { _id: req.user._id},
-      update: {$set: {avatar: server.url + '/avatars/' + filename}},
+      update: {$set: {avatar: 'avatars/' + filename}}, //workaround: UI should prepend http://hostname:port/
     }, function(err, doc, lastErrorObject) {
       if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') })}
       if (!doc) {return res.send(404, { error: 'User does not exist'})}
