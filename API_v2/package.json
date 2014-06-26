@@ -14,7 +14,16 @@
   "author": "sudodoki <smd.deluzion@gmail.com> (http://sudodoki.name/)",
   "license": "MIT",
   "dependencies": {
-    "mongojs": "~0.10.0",
-    "restify": "~2.6.1"
-  }
+    "mongojs": "~0.13.0",
+    "restify": "~2.7.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sudodoki/api_client_test"
+  },
+  "bugs": {
+    "url": "https://github.com/sudodoki/api_client_test/issues"
+  },
+  "homepage": "https://github.com/sudodoki/api_client_test"
 }
