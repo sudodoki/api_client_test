@@ -18,8 +18,8 @@ function debug() {
 var db = mongojs(nconfInstance.get('dbName'))
 var server = restify.createServer({ name: nconfInstance.get('appName') })
 
-var CORSHanlder = function(req, res, next) {
-  debug('CORSHanlder called')
+var CORSHandler = function(req, res, next) {
+  debug('CORSHandler called')
   debug('request method is ', req.method)
   res.header('Access-Control-Allow-Credentials', true);
   res.header('Allow', 'GET, HEAD, POST, DELETE');
@@ -58,7 +58,7 @@ var stripOut = function (user) {
 }
 
 server
-  .use(CORSHanlder)
+  .use(CORSHandler)
   .use(restify.fullResponse())
   .pre(restify.pre.sanitizePath())
   .use(restify.bodyParser({keepExtensions: true}))
@@ -72,13 +72,13 @@ server.get(/\/avatars\/?.*/, restify.serveStatic({
 }));
 
 server.on('NotFound', function(req, res, cb) {
-  CORSHanlder(req, res, function(){
+  CORSHandler(req, res, function(){
     return res.send(404, {status: 'Not Found'})
   })
 })
 
 server.on('MethodNotAllowed', function(req, res, cb){
-  CORSHanlder(req, res, function(){
+  CORSHandler(req, res, function(){
     return res.send(204)
   })
 })
