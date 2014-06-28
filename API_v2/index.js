@@ -160,7 +160,7 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
   var extension = req.files.avatar.name.split('.').slice(-1)[0]
   var filename = req.user.login + '.' + extension
   var source = fs.createReadStream(req.files.avatar.path);
-  var dest = fs.createWriteStream('public/' + filename);
+  var dest = fs.createWriteStream('public/avatars/' + filename);
   source.pipe(dest);
   source.on('end', function() {
     db.collection('users').findAndModify({
