@@ -1,6 +1,7 @@
 var restify = require('restify'),
     fs      = require('fs'),
     mongojs = require('mongojs'),
+    pkg     = require('./package.json'),
     db      = mongojs('spa_api');
 
 var server = restify.createServer({ name: 'spa-api' })
@@ -71,7 +72,7 @@ server.listen(3000, function() {
 })
 
 server.get('/version', function(req, res, next) {
-  return res.send('2.0')
+  return res.send(pkg.version)
 })
 
 server.post('/signin', function (req, res, next) {
@@ -177,3 +178,5 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
     res.send(502, {error: 'Unexpected error with avatar upload'})
   });
 })
+
+module.exports = server
