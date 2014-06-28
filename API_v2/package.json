@@ -1,10 +1,11 @@
 {
   "name": "API_v2",
-  "version": "0.0.0",
+  "version": "0.2.0",
   "description": "Sample API used for training APPs on Kottans' JS Course (AKA JS CA COURSE)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --reporter=spec --recursive",
+    "dev": "mocha --reporter=nyan --recursive"
   },
   "keywords": [
     "API",
@@ -17,7 +18,11 @@
     "mongojs": "~0.13.0",
     "restify": "~2.7.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "supertest": "~0.13.0",
+    "mocha": "~1.20.1",
+    "chai": "~1.9.1"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/sudodoki/api_client_test"
