@@ -4,8 +4,8 @@
   "description": "Sample API used for training APPs on Kottans' JS Course (AKA JS CA COURSE)",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --reporter=spec --recursive",
-    "dev": "mocha --reporter=nyan --recursive"
+    "test": "NODE_ENV=test mocha --reporter=spec --recursive",
+    "dev": "mocha --reporter=nyan --recursive --watch"
   },
   "keywords": [
     "API",
@@ -16,7 +16,8 @@
   "license": "MIT",
   "dependencies": {
     "mongojs": "~0.13.0",
-    "restify": "~2.7.0"
+    "restify": "~2.7.0",
+    "nconf": "~0.6.9"
   },
   "devDependencies": {
     "supertest": "~0.13.0",
