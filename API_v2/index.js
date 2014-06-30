@@ -106,15 +106,15 @@ server.post('/signup', function (req, res, next) {
       user = req.params;
   debug('*** Sign up for: ', user)
   if (!(user.password)) {
-    errors.push({password: "Use at least some password"})
+    errors.push("Use at least some password");
   }
   if (!(user.password && user.passwordConfirmation && user.password === user.passwordConfirmation)) {
-    errors.push({passwordConfirmation: 'Should match password'})
+    errors.push('Should match password');
   }
   db.collection('users').find({login: user.login}, function (err, userDoc) {
     if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') })}
     if (userDoc.length > 0) {
-      errors.push({login: 'This login is already taken, sorry'})
+      errors.push('This login is already taken, sorry');
     }
     if (errors.length === 0) {
       db.collection('users').insert({
