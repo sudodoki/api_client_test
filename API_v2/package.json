@@ -4,6 +4,9 @@
   "description": "Sample API used for training APPs on Kottans' JS Course (AKA JS CA COURSE)",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed": "node scripts/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -14,7 +17,11 @@
   "author": "sudodoki <smd.deluzion@gmail.com> (http://sudodoki.name/)",
   "license": "MIT",
   "dependencies": {
-    "mongojs": "~0.10.0",
-    "restify": "~2.6.1"
+    "bunyan": "^1.2.3",
+    "mongojs": "^0.17.0",
+    "restify": "^2.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.2.1"
   }
 }
