@@ -1,71 +1,71 @@
-const restify = require('restify'),
+var restify = require('restify'),
       fs      = require('fs'),
       mongojs = require('mongojs'),
       pkg     = require('./package.json'),
-      nconfInstance = require('./nconf-wrapper')
+      nconfInstance = require('./nconf-wrapper');
 
-const env = nconfInstance.get('NODE_ENV') || 'development';
+var env = nconfInstance.get('NODE_ENV') || 'development';
 
-console.log("Currently running environment:", env)
+console.log("Currently running environment:", env);
 
 function debug() {
-  var args = [].slice.apply(arguments)
+  var args = [].slice.apply(arguments);
   if (env !== 'test') {
-    console.log.apply(console, args)
+    console.log.apply(console, args);
   }
 }
 
-var db = mongojs(nconfInstance.get('dbName'))
-var server = restify.createServer({ name: nconfInstance.get('appName') })
+var db = mongojs(nconfInstance.get('dbName'));
+var server = restify.createServer({ name: nconfInstance.get('appName') });
 
 var CORSHandler = function(req, res, next) {
-  debug('CORSHandler called')
-  debug('request method is ', req.method)
+  debug('CORSHandler called');
+  debug('request method is ', req.method);
   res.header('Access-Control-Allow-Credentials', true);
   res.header('Allow', 'GET, HEAD, POST, DELETE');
   res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Headers', 'Accept, X-Requested-With, Content-Type, SECRET-TOKEN, secret');
   res.header('Access-Control-Request-Method', 'POST,GET');
-  debug(req.headers)
-  debug("_____________________________________________")
+  debug(req.headers);
+  debug("_____________________________________________");
   next();
- }
+};
 
 var forAuthorized = function(req, res, next) {
-  if (!req.headers['secret-token']) { res.send(401, {error: 'Need to be logged in'}) }
-  next()
-}
+  if (!req.headers['secret-token']) { res.send(401, {error: 'Need to be logged in'}); }
+  next();
+};
 
 var setUser = function(req, res, next) {
   db.collection('users').findOne({_id: mongojs.ObjectId(req.headers['secret-token'])}, function(err, doc) {
-    if (err || !doc) {return res.send(401, {error: 'User does not exist'})}
-    req.user = doc
-    next()
-  })
-}
+    if (err || !doc) {return res.send(401, {error: 'User does not exist'}); }
+    req.user = doc;
+    next();
+  });
+};
 
 var stripOut = function (user) {
-  var copy
+  var copy;
   try {
-    copy = JSON.parse(JSON.stringify(user))
+    copy = JSON.parse(JSON.stringify(user));
   } catch(e) {
-    copy = {}
+    copy = {};
   }
-  delete copy.password
-  delete copy.is_published
-  return copy
+  delete copy.password;
+  delete copy.is_published;
+  return copy;
 
-}
+};
 
 server
   .use(CORSHandler)
   .use(restify.fullResponse())
   .pre(restify.pre.sanitizePath())
-  .use(restify.bodyParser({keepExtensions: true}))
+  .use(restify.bodyParser({keepExtensions: true}));
 
 server.listen(nconfInstance.get('port'), nconfInstance.get('host'), function() {
-  console.log('%s is up and running. Check out %s.', server.name, server.url)
-})
+  console.log('%s is up and running. Check out %s.', server.name, server.url);
+});
 
 server.get(/\/avatars\/?.*/, restify.serveStatic({
   directory: './public'
@@ -73,48 +73,48 @@ server.get(/\/avatars\/?.*/, restify.serveStatic({
 
 server.on('NotFound', function(req, res, cb) {
   CORSHandler(req, res, function(){
-    return res.send(404, {status: 'Not Found'})
-  })
-})
+    return res.send(404, {status: 'Not Found'});
+  });
+});
 
 server.on('MethodNotAllowed', function(req, res, cb){
   CORSHandler(req, res, function(){
-    return res.send(204)
-  })
-})
+    return res.send(204);
+  });
+});
 
 server.get('/version', function(req, res, next) {
-  return res.send(pkg.version)
-})
+  return res.send(pkg.version);
+});
 
 server.post('/signin', function (req, res, next) {
   var user = req.params;
-  debug('Log in using: ', user)
-  if (!user.login && !user.password) { res.send(400, {error: 'Please specify both login & password'}) }
+  debug('Log in using: ', user);
+  if (!user.login && !user.password) { res.send(400, {error: 'Please specify both login & password'}); }
   db.collection('users').findOne({login: user.login, password: user.password}, function (err, userDoc) {
-    if (err) { return res.send (500, JSON.stringify({ error: 'Database error:' + (err.message || 'unknown error') }))}
+    if (err) { return res.send (500, JSON.stringify({ error: 'Database error:' + (err.message || 'unknown error') }));}
     if (!userDoc) {
-      return res.send (403, { error: 'Wrong login or password, or even both!'})
+      return res.send (403, { error: 'Wrong login or password, or even both!'});
     }
-    debug('userDoc is ', userDoc)
-    return res.send(200, { status: 'good to go', token: userDoc._id})
-  })
-})
+    debug('userDoc is ', userDoc);
+    return res.send(200, { status: 'good to go', token: userDoc._id});
+  });
+});
 
 server.post('/signup', function (req, res, next) {
   var errors = [],
       user = req.params;
-  debug('*** Sign up for: ', user)
+  debug('*** Sign up for: ', user);
   if (!(user.password)) {
-    errors.push({password: "Use at least some password"})
+    errors.push({password: "Use at least some password"});
   }
   if (!(user.password && user.passwordConfirmation && user.password === user.passwordConfirmation)) {
-    errors.push({passwordConfirmation: 'Should match password'})
+    errors.push({passwordConfirmation: 'Should match password'});
   }
   db.collection('users').find({login: user.login}, function (err, userDoc) {
-    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') })}
+    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') });}
     if (userDoc.length > 0) {
-      errors.push({login: 'This login is already taken, sorry'})
+      errors.push({login: 'This login is already taken, sorry'});
     }
     if (errors.length === 0) {
       db.collection('users').insert({
@@ -124,54 +124,54 @@ server.post('/signup', function (req, res, next) {
         is_published: false,
         email: user.email
       }, function (err, userDoc) {
-        if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') })}
-        debug('inserted document is: ', userDoc)
-        res.send(200, { status: 'New and shiny account for you!', token: userDoc._id})
-      })
+        if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') }); }
+        debug('inserted document is: ', userDoc);
+        res.send(200, { status: 'New and shiny account for you!', token: userDoc._id});
+      });
     } else {
-      res.send(422, {errors: errors})
+      res.send(422, {errors: errors});
     }
   })
 })
 
 
 server.get('/user', function (req, res, next) {
-  debug(req.method)
+  debug(req.method);
   db.collection('users').find({is_published: "true"}, function (err, docs) {
-    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') })}
-    res.send(docs.map(stripOut))
-  })
-})
+    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') });}
+    res.send(docs.map(stripOut));
+  });
+});
 
 server.get('/user/:id', forAuthorized, function (req, res, next) {
   db.collection('users').findOne({ _id: mongojs.ObjectId(req.headers['secret-token']), is_published: "true"}, function(err, doc) {
-    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') })}
-    if (!doc) {return res.send(404, 'User does not exist')}
-    return res.send(200, stripOut(doc))
-  })
-})
+    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') });}
+    if (!doc) {return res.send(404, 'User does not exist');}
+    return res.send(200, stripOut(doc));
+  });
+});
 
 server.get('/user/me', forAuthorized, setUser, function (req, res, next) {
-  return res.send(200, req.user)
+  return res.send(200, req.user);
 })
 
 server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
-  var userUpdate = { $set: req.params }
-  debug('user ', userUpdate, req.user._id)
+  var userUpdate = { $set: req.params };
+  debug('user ', userUpdate, req.user._id);
   db.collection('users').findAndModify({
     query: { _id: req.user._id},
     update: userUpdate,
   }, function(err, doc, lastErrorObject) {
-    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') })}
-    console.log(doc)
-    res.send(200, doc)
-  })
-})
+    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') });}
+    console.log(doc);
+    res.send(200, doc);
+  });
+});
 
 server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
-  debug('&&&', req.files.avatar.path)
-  var extension = req.files.avatar.name.split('.').slice(-1)[0]
-  var filename = req.user.login + '.' + extension
+  debug('&&&', req.files.avatar.path);
+  var extension = req.files.avatar.name.split('.').slice(-1)[0];
+  var filename = req.user.login + '.' + extension;
   var source = fs.createReadStream(req.files.avatar.path);
   var dest = fs.createWriteStream('public/avatars/' + filename);
   source.pipe(dest);
@@ -180,15 +180,15 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
       query: { _id: req.user._id},
       update: {$set: {avatar: server.url + '/avatars/' + filename}},
     }, function(err, doc, lastErrorObject) {
-      if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') })}
-      if (!doc) {return res.send(404, { error: 'User does not exist'})}
-      debug(doc)
-      res.send(200, doc)
-    })
+      if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') });}
+      if (!doc) {return res.send(404, { error: 'User does not exist'});}
+      debug(doc);
+      res.send(200, doc);
+    });
   });
   source.on('error', function(err) {
-    res.send(502, {error: 'Unexpected error with avatar upload'})
+    res.send(502, {error: 'Unexpected error with avatar upload'});
   });
-})
+});
 
-module.exports = server
+module.exports = server;
