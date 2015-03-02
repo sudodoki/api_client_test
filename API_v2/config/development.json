@@ -1,4 +1,5 @@
 {
   "host": "localhost",
-  "port": 1337
+  "port": 1337,
+  "loglevel": "debug"
 }

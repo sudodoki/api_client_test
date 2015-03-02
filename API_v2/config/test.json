@@ -1,3 +1,4 @@
 {
-  "dbName": "test_spa_api"
+  "dbName": "test_spa_api",
+  "loglevel": "warn"
 }

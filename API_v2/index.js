@@ -1,48 +1,33 @@
 var restify = require('restify'),
-      fs      = require('fs'),
-      mongojs = require('mongojs'),
-      pkg     = require('./package.json'),
-      nconfInstance = require('./nconf-wrapper');
+    fs      = require('fs'),
+    path    = require('path'),
+    mongojs = require('mongojs'),
+    pkg     = require('./package.json'),
+    nconfInstance = require('./nconf-wrapper');
 
-var env = nconfInstance.get('NODE_ENV') || 'development';
 
-console.log("Currently running environment:", env);
 
-function debug() {
-  var args = [].slice.apply(arguments);
-  if (env !== 'test') {
-    console.log.apply(console, args);
+var appName = nconfInstance.get('appName');
+var Logger = require('bunyan');
+var log = new Logger.createLogger({
+  name: appName,
+  serializers: {
+      req: Logger.stdSerializers.req
   }
-}
+});
+log.level(nconfInstance.get('loglevel'))
+
 
 var db = mongojs(nconfInstance.get('dbName'));
-var server = restify.createServer({ name: nconfInstance.get('appName') });
 
-var CORSHandler = function(req, res, next) {
-  debug('CORSHandler called');
-  debug('request method is ', req.method);
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Allow', 'GET, HEAD, POST, DELETE');
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Headers', 'Accept, X-Requested-With, Content-Type, SECRET-TOKEN, secret');
-  res.header('Access-Control-Request-Method', 'POST,GET');
-  debug(req.headers);
-  debug("_____________________________________________");
-  next();
-};
+var server = restify.createServer({
+  name: appName,
+  log: log
+});
 
-var forAuthorized = function(req, res, next) {
-  if (!req.headers['secret-token']) { res.send(401, {error: 'Need to be logged in'}); }
-  next();
-};
-
-var setUser = function(req, res, next) {
-  db.collection('users').findOne({_id: mongojs.ObjectId(req.headers['secret-token'])}, function(err, doc) {
-    if (err || !doc) {return res.send(401, {error: 'User does not exist'}); }
-    req.user = doc;
-    next();
-  });
-};
+var CORSHandler = require('./middlewares').CORSHanlder;
+var forAuthorized = require('./middlewares').forAuthorized;
+var setUser = require('./middlewares').setUser;
 
 var stripOut = function (user) {
   var copy;
@@ -54,7 +39,6 @@ var stripOut = function (user) {
   delete copy.password;
   delete copy.is_published;
   return copy;
-
 };
 
 server
@@ -62,10 +46,6 @@ server
   .use(restify.fullResponse())
   .pre(restify.pre.sanitizePath())
   .use(restify.bodyParser({keepExtensions: true}));
-
-server.listen(nconfInstance.get('port'), nconfInstance.get('host'), function() {
-  console.log('%s is up and running. Check out %s.', server.name, server.url);
-});
 
 server.get(/\/avatars\/?.*/, restify.serveStatic({
   directory: './public'
@@ -83,20 +63,28 @@ server.on('MethodNotAllowed', function(req, res, cb){
   });
 });
 
+server.pre(function (request, response, next) {
+    request.log.debug({ req: request }, 'REQUEST');
+    next();
+});
+
+server.listen(nconfInstance.get('port'), nconfInstance.get('host'), function() {
+  log.info('%s is up and running. Check out %s.', server.name, server.url);
+});
+
 server.get('/version', function(req, res, next) {
   return res.send(pkg.version);
 });
 
 server.post('/signin', function (req, res, next) {
   var user = req.params;
-  debug('Log in using: ', user);
   if (!user.login && !user.password) { res.send(400, {error: 'Please specify both login & password'}); }
   db.collection('users').findOne({login: user.login, password: user.password}, function (err, userDoc) {
-    if (err) { return res.send (500, JSON.stringify({ error: 'Database error:' + (err.message || 'unknown error') }));}
+    if (err) { return res.send (500, JSON.stringify({ error: 'Database error:' + (err.message || 'unknown error') })); }
     if (!userDoc) {
       return res.send (403, { error: 'Wrong login or password, or even both!'});
     }
-    debug('userDoc is ', userDoc);
+    request.log.info({userDoc: userDoc}, 'SIGNIN');
     return res.send(200, { status: 'good to go', token: userDoc._id});
   });
 });
@@ -104,15 +92,17 @@ server.post('/signin', function (req, res, next) {
 server.post('/signup', function (req, res, next) {
   var errors = [],
       user = req.params;
-  debug('*** Sign up for: ', user);
-  if (!(user.password)) {
+  if (!user.login) {
+    errors.push({login: "Login shouldn't be empty"});
+  }
+  if (!user.password) {
     errors.push({password: "Use at least some password"});
   }
   if (!(user.password && user.passwordConfirmation && user.password === user.passwordConfirmation)) {
     errors.push({passwordConfirmation: 'Should match password'});
   }
   db.collection('users').find({login: user.login}, function (err, userDoc) {
-    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') });}
+    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') }); }
     if (userDoc.length > 0) {
       errors.push({login: 'This login is already taken, sorry'});
     }
@@ -125,64 +115,61 @@ server.post('/signup', function (req, res, next) {
         email: user.email
       }, function (err, userDoc) {
         if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') }); }
-        debug('inserted document is: ', userDoc);
+        request.log.info({userDoc: userDoc}, 'SIGNUP');
         res.send(200, { status: 'New and shiny account for you!', token: userDoc._id});
       });
     } else {
       res.send(422, {errors: errors});
     }
-  })
-})
-
+  });
+});
 
 server.get('/user', function (req, res, next) {
-  debug(req.method);
   db.collection('users').find({is_published: "true"}, function (err, docs) {
-    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') });}
+    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') }); }
     res.send(docs.map(stripOut));
   });
 });
 
 server.get('/user/:id', forAuthorized, function (req, res, next) {
   db.collection('users').findOne({ _id: mongojs.ObjectId(req.headers['secret-token']), is_published: "true"}, function(err, doc) {
-    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') });}
-    if (!doc) {return res.send(404, 'User does not exist');}
+    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') }); }
+    if (!doc) {return res.send(404, 'User does not exist'); }
     return res.send(200, stripOut(doc));
   });
 });
 
 server.get('/user/me', forAuthorized, setUser, function (req, res, next) {
   return res.send(200, req.user);
-})
+});
 
 server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
   var userUpdate = { $set: req.params };
-  debug('user ', userUpdate, req.user._id);
   db.collection('users').findAndModify({
     query: { _id: req.user._id},
     update: userUpdate,
   }, function(err, doc, lastErrorObject) {
-    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') });}
-    console.log(doc);
+    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') }); }
+    request.log.info({doc: doc}, 'USER_ME_UPDATE');
     res.send(200, doc);
   });
 });
 
 server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
-  debug('&&&', req.files.avatar.path);
-  var extension = req.files.avatar.name.split('.').slice(-1)[0];
+  request.log.info({path: req.files.avatar.path}, 'AVA_UPDATE_START');
+  var extension = path.extname(req.files.avatar.name);
   var filename = req.user.login + '.' + extension;
   var source = fs.createReadStream(req.files.avatar.path);
-  var dest = fs.createWriteStream('public/avatars/' + filename);
+  var dest = fs.createWriteStream('public/' + filename);
   source.pipe(dest);
   source.on('end', function() {
     db.collection('users').findAndModify({
       query: { _id: req.user._id},
       update: {$set: {avatar: server.url + '/avatars/' + filename}},
     }, function(err, doc, lastErrorObject) {
-      if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') });}
-      if (!doc) {return res.send(404, { error: 'User does not exist'});}
-      debug(doc);
+      if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') }); }
+      if (!doc) {return res.send(404, { error: 'User does not exist'}); }
+      request.log.info({doc: doc}, 'AVA_UPDATE_END');
       res.send(200, doc);
     });
   });

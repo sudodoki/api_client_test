@@ -5,6 +5,7 @@ nconf
   .env()
   .file('./config/' + env +'.json')
   .defaults({
+    loglevel: 'info',
     appName: 'spa-api',
     dbName : 'spa_api',
     port   : 3000,

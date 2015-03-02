@@ -6,7 +6,7 @@ const app = require(root + 'index')
 const pkg = require(root + 'package.json')
 
 describe('GET /version', function(){
-  it('should have CORS hearder', function(done){
+  it('should have CORS header', function(done){
     request(app)
       .options('/version')
       .set('Origin', 'http://mysite.com')

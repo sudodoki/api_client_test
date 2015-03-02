@@ -4,6 +4,9 @@
   "description": "Sample API used for training APPs on Kottans' JS Course (AKA JS CA COURSE)",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed": "node scripts/seed.js",
     "test": "NODE_ENV=test mocha --reporter=spec --recursive",
     "dev": "mocha --reporter=nyan --recursive --watch"
   },
@@ -15,11 +18,13 @@
   "author": "sudodoki <smd.deluzion@gmail.com> (http://sudodoki.name/)",
   "license": "MIT",
   "dependencies": {
-    "mongojs": "~0.13.0",
-    "restify": "~2.7.0",
+    "bunyan": "^1.2.3",
+    "mongojs": "^0.17.0",
+    "restify": "^2.8.3",
     "nconf": "~0.6.9"
   },
   "devDependencies": {
+    "nodemon": "^1.2.1",
     "supertest": "~0.13.0",
     "mocha": "~1.20.1",
     "chai": "~1.9.1"
