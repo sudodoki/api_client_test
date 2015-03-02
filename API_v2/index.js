@@ -2,25 +2,30 @@ var restify = require('restify'),
     fs      = require('fs'),
     path    = require('path'),
     mongojs = require('mongojs'),
-    db      = mongojs('spa_api');
+    pkg     = require('./package.json'),
+    nconfInstance = require('./nconf-wrapper');
 
-var appName = 'spa-dating';
 
 
+var appName = nconfInstance.get('appName');
 var Logger = require('bunyan');
 var log = new Logger.createLogger({
-        name: appName,
-        serializers: {
-            req: Logger.stdSerializers.req
-        }
-    });
+  name: appName,
+  serializers: {
+      req: Logger.stdSerializers.req
+  }
+});
+log.level(nconfInstance.get('loglevel'))
+
+
+var db = mongojs(nconfInstance.get('dbName'));
 
 var server = restify.createServer({
   name: appName,
   log: log
 });
 
-var CORSHanlder = require('./middlewares').CORSHanlder;
+var CORSHandler = require('./middlewares').CORSHanlder;
 var forAuthorized = require('./middlewares').forAuthorized;
 var setUser = require('./middlewares').setUser;
 
@@ -37,7 +42,7 @@ var stripOut = function (user) {
 };
 
 server
-  .use(CORSHanlder)
+  .use(CORSHandler)
   .use(restify.fullResponse())
   .pre(restify.pre.sanitizePath())
   .use(restify.bodyParser({keepExtensions: true}));
@@ -47,28 +52,28 @@ server.get(/\/avatars\/?.*/, restify.serveStatic({
 }));
 
 server.on('NotFound', function(req, res, cb) {
-  CORSHanlder(req, res, function(){
+  CORSHandler(req, res, function(){
     return res.send(404, {status: 'Not Found'});
   });
 });
 
 server.on('MethodNotAllowed', function(req, res, cb){
-  CORSHanlder(req, res, function(){
+  CORSHandler(req, res, function(){
     return res.send(204);
   });
 });
 
 server.pre(function (request, response, next) {
-    request.log.info({ req: request }, 'REQUEST');
+    request.log.debug({ req: request }, 'REQUEST');
     next();
 });
 
-server.listen(3000, function() {
-  console.log('%s is up and running. Check out %s.', server.name, server.url);
+server.listen(nconfInstance.get('port'), nconfInstance.get('host'), function() {
+  log.info('%s is up and running. Check out %s.', server.name, server.url);
 });
 
 server.get('/version', function(req, res, next) {
-  return res.send('2.0');
+  return res.send(pkg.version);
 });
 
 server.post('/signin', function (req, res, next) {
@@ -172,3 +177,5 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
     res.send(502, {error: 'Unexpected error with avatar upload'});
   });
 });
+
+module.exports = server;
