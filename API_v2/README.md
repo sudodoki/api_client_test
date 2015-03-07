@@ -1,8 +1,26 @@
-# START!
-To run this API, you need: 
-+ run `npm install` being in API_v2 folder
-+ have [mongodb](http://www.mongodb.org/downloads) up & running
-+ run `node index` & start the API
+# API_TEST
+
+## Prerequisites
+
++ Node
++ npm
++ [MongoDB](http://docs.mongodb.org/v2.6/installation/)
+
+## Instructions
+
+To run:
+```
+git clone git@github.com:sudodoki/api_client_test.git api_client_test
+cd $_
+npm install
+npm run seed
+npm start
+```
+
+To run tests:
+```
+npm test
+```
 
 # QUERY!
 Sample requests: 
