@@ -49,18 +49,18 @@ describe('POST ' + endPoint, function() {
   });
 
   it('should return error if user exists', function(done) {
-    var doRquest = function() {
+    var doRequest = function() {
       return request(app)
         .post(endPoint)
         .send({login: 'test', password: 'test', passwordConfirmation: 'test'});
     };
 
-    doRquest()
+    doRequest()
       .expect(200)
       .end(function(err) {
         if (err) return done(err);
 
-        doRquest()
+        doRequest()
           .expect(422)
           .expect(exceptValidationError('login')) // this login is already taken
           .end(done);
