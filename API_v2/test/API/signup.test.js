@@ -26,8 +26,8 @@ describe('GET ' + endPoint, function() {
 });
 
 describe('POST ' + endPoint, function() {
-  beforeEach(function() {
-    db.collection('users').drop();
+  beforeEach(function(done) {
+    db.collection('users').drop(function() {done();});
   });
 
   it('should require login, password and passwordConfirmation', function(done) {

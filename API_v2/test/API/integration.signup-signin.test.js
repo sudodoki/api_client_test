@@ -18,8 +18,8 @@ var nconfInstance = require(root + 'nconf-wrapper');
 var db = mongojs(nconfInstance.get('dbName'));
 
 describe('signup-signin integration', function() {
-  beforeEach(function() {
-    db.collection('users').drop();
+  beforeEach(function(done) {
+    db.collection('users').drop(function() {done();});
   });
 
   it('should return error if user exists', function(done) {

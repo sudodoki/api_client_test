@@ -33,8 +33,9 @@ describe('POST ' + endPoint, function() {
       password: '***'
     };
 
-    db.collection('users').drop();
-    db.collection('users').insert(user, done);
+    db.collection('users').drop(function() {
+      db.collection('users').insert(user, done);
+    });
   });
 
   it('should require login and password', function(done) {
