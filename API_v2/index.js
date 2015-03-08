@@ -125,7 +125,7 @@ server.post('/signup', function (req, res, next) {
 });
 
 server.get('/user', function (req, res, next) {
-  db.collection('users').find({is_published: 'true'}, function (err, docs) {
+  db.collection('users').find({is_published: true}, function (err, docs) {
     if (err) { return handleDbError(err, res); }
     res.send(docs.map(stripOut));
   });
