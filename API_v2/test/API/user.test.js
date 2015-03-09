@@ -44,6 +44,22 @@ function resetDb(done) {
   });
 }
 
+function authRequest(uri, method) {
+  method = method || 'get';
+
+  return request(app)
+        [method](uri)
+        .set('secret-token', user._id);
+}
+
+function hasNoField(field) {
+  return function(res) {
+    if (res.body.some(function(item) {return item[field];})) {
+      return 'Expected no '+field+', but get ' . item[field];
+    }
+  };
+}
+
 
 describe('GET /user', function() {
   beforeEach(resetDb);
@@ -74,10 +90,11 @@ describe('GET /user', function() {
 });
 
 describe('/user: authorized', function() {
-  function basicAuthTest(endPoint) {
+  function basicAuthTest(endPoint, method) {
+    method = method || 'get';
     it('should return 401 for when no token', function(done) {
       request(app)
-        .get(endPoint)
+        [method](endPoint)
         .expect(401)
         .end(done);
     });
@@ -86,7 +103,7 @@ describe('/user: authorized', function() {
       // error caused by using of mongojs.ObjectId()
 
       request(app)
-        .get(endPoint)
+        [method](endPoint)
         .set('secret-token', 'wrong token')
         .expect(500)
         .end(done);
@@ -94,7 +111,7 @@ describe('/user: authorized', function() {
 
     it('should return 401 when wrong token', function(done) {
       request(app)
-        .get(endPoint)
+        [method](endPoint)
         .set('secret-token', 'zxcvbnmasdfg')
         .expect(401)
         .expect('{"error":"Need to be logged in"}')
@@ -108,9 +125,7 @@ describe('/user: authorized', function() {
     basicAuthTest('/user/me');
 
     it('should return user info by auth token', function(done) {
-      request(app)
-        .get('/user/me')
-        .set('secret-token', user._id)
+      authRequest('/user/me')
         .expect(200)
         .expect(user)
         .end(done);
@@ -121,38 +136,42 @@ describe('/user: authorized', function() {
     basicAuthTest('/user/' + user._id);
 
     it('should return user info', function(done) {
-      request(app)
-        .get('/user/' + publicUser._id)
-        .set('secret-token', user._id)
+      authRequest('/user/' + publicUser._id)
         .expect(200)
         .expect(publicUser)
         .end(done);
     });
 
     it('should not return non-public profiles', function(done) {
-      request(app)
-        .get('/user/' + privateUser._id)
-        .set('secret-token', user._id)
+      authRequest('/user/' + privateUser._id)
         .expect(404)
         .expect('{"error":"User does not exist"}')
         .end(done);
     });
 
     it('should return 404 if we searching for non existed user', function(done) {
-      request(app)
-        .get('/user/xxxxxxxxxxxx')
-        .set('secret-token', user._id)
+      authRequest('/user/xxxxxxxxxxxx')
         .expect(404)
         .expect('{"error":"User does not exist"}')
         .end(done);
     });
   });
-});
 
-function hasNoField(field) {
-  return function(res) {
-    if (res.body.some(function(item) {return item[field];})) {
-      return 'Expected no '+field+', but get ' . item[field];
-    }
-  };
-}
+  describe('POST /user/me', function() {
+    basicAuthTest('/user/me', 'post');
+
+    it('should return change profile data of me', function(done) {
+      var expected = 'kitty';
+
+      authRequest('/user/me', 'post')
+        .send({name: expected})
+        .expect(200)
+        .end(function() {
+          db.collection('users').findOne({_id: mongojs.ObjectId(user._id)}, function(err, doc) {
+            expect(doc.name).to.equal(expected);
+            done();
+          });
+        });
+    });
+  });
+});
