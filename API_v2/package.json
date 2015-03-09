@@ -5,10 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
+    "dev": "mocha --reporter=nyan --recursive --watch",
     "seed": "node scripts/seed.js",
-    "test": "NODE_ENV=test mocha --reporter=spec --recursive",
-    "dev": "mocha --reporter=nyan --recursive --watch"
+    "test": "NODE_ENV=test mocha --reporter=spec --recursive"
   },
   "keywords": [
     "API",
@@ -27,7 +26,8 @@
     "nodemon": "^1.2.1",
     "supertest": "~0.13.0",
     "mocha": "~1.20.1",
-    "chai": "~1.9.1"
+    "chai": "~1.9.1",
+    "sinon": "~1.13.0"
   },
   "repository": {
     "type": "git",

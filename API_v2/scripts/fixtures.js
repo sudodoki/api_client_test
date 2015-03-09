@@ -1,6 +1,8 @@
 // http://git.io/q8Zdjg
 var fakeUsers = module.exports = [
   {
+    "login": "burt",
+    "password": "burt",
     "age": 30,
     "is_published": true,
     "gender": "Female",
@@ -13,6 +15,8 @@ var fakeUsers = module.exports = [
     "avatar": "http://retroavatar.appspot.com/api?name=Marks"
   },
   {
+    "login": "jerri",
+    "password": "jerri",
     "age": 32,
     "is_published": false,
     "gender": "Female",
@@ -25,6 +29,8 @@ var fakeUsers = module.exports = [
     "avatar": "http://retroavatar.appspot.com/api?name=Fitzgerald"
   },
   {
+    "login": "stefanie",
+    "password": "stefanie",
     "age": 20,
     "is_published": false,
     "gender": "Female",
@@ -37,6 +43,8 @@ var fakeUsers = module.exports = [
     "avatar": "http://retroavatar.appspot.com/api?name=Ford"
   },
   {
+    "login": "marquez",
+    "password": "marquez",
     "age": 25,
     "is_published": false,
     "gender": "Female",
@@ -49,6 +57,8 @@ var fakeUsers = module.exports = [
     "avatar": "http://retroavatar.appspot.com/api?name=Shields"
   },
   {
+    "login": "ashlee",
+    "password": "ashlee",
     "age": 29,
     "is_published": true,
     "gender": "Female",

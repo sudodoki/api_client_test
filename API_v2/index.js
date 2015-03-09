@@ -157,12 +157,15 @@ server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
   });
 });
 
-server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
+server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next) {
+  if (!req.files || !req.files.avatar) {
+    return res.send(422, {errors: [{avatar: 'No file was uploaded'}]});
+  }
   req.log.info({path: req.files.avatar.path}, 'AVA_UPDATE_START');
   var extension = path.extname(req.files.avatar.name);
-  var filename = req.user.login + '.' + extension;
+  var filename = req.user.login + extension;
   var source = fs.createReadStream(req.files.avatar.path);
-  var dest = fs.createWriteStream('public/' + filename);
+  var dest = fs.createWriteStream('public/avatars/' + filename);
   source.pipe(dest);
   source.on('end', function() {
     db.collection('users').findAndModify({
@@ -170,7 +173,6 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
       update: {$set: {avatar: server.url + '/avatars/' + filename}},
     }, function(err, doc, lastErrorObject) {
       if (err) { handleDbError(err, res); }
-      if (!doc) {return res.send(404, { error: 'User does not exist'}); }
       req.log.info({doc: doc}, 'AVA_UPDATE_END');
       res.send(200, doc);
     });

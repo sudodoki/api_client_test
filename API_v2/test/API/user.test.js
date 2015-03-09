@@ -3,6 +3,7 @@ const root = '../../';
 const request = require('supertest');
 const chai = require('chai');
 const expect = chai.expect;
+var exceptValidationError = require('./utils/exceptValidationError');
 
 // TODO: probably we should create some registry and move db, logger etc initislisation there
 // in order to avoid of duplication
@@ -17,7 +18,6 @@ var userList = require(root + 'scripts/fixtures');
 userList = JSON.parse(JSON.stringify(userList));
 userList = userList.map(function(item, index) {
   item._id = mongojs.ObjectId();
-  item.passowrd = index;
   return item;
 });
 
@@ -172,6 +172,121 @@ describe('/user: authorized', function() {
             done();
           });
         });
+    });
+  });
+
+  describe('POST /user/me/avatar', function() {
+    basicAuthTest('/user/me/avatar', 'post');
+
+    var sinon = require('sinon');
+    var fs = require('fs');
+    var avatarStream;
+
+    beforeEach(function() {
+      avatarStream = {
+        on: function(eventName, func) {
+          if (eventName == this.fireEvent) {
+            func();
+          }
+        },
+        fireEvent: 'end',
+        pipe: sinon.spy(),
+        willFail: function() {
+          this.fireEvent = 'error';
+        }
+      };
+    });
+
+    afterEach(function() {
+      if (fs.createWriteStream.restore) {
+        fs.createWriteStream.restore();
+      }
+      if (fs.createReadStream.restore) {
+        fs.createReadStream.restore();
+      }
+    });
+
+    function postAvatar() {
+      var req = authRequest('/user/me/avatar', 'post')
+        .attach('avatar', 'test/fixtures/kottans.png');
+
+      // we can set our spies only after supertest finishes with image attachments
+      sinon.stub(fs, 'createWriteStream');
+      sinon.stub(fs, 'createReadStream').returns(avatarStream);
+
+      return req;
+    }
+
+    it('should return error if no image uploaded', function(done) {
+      authRequest('/user/me/avatar', 'post')
+        .expect(422)
+        .expect(exceptValidationError('avatar'))
+        .end(done);
+    });
+
+    it('should read uploaded file', function(done) {
+      postAvatar()
+        .expect(200)
+        .end(function() {
+          // we have only one file in request, so it is enough to check that
+          // it was read from tmp dir
+          expect(fs.createReadStream.calledWithMatch(/\/tmp\/.*\.png/)).to.be.equal(true);
+
+          done();
+        });
+    });
+
+    it('should save the uploaded image', function(done) {
+      postAvatar()
+        .expect(200)
+        .end(function() {
+          expect(avatarStream.pipe.calledOnce).to.be.equal(true);
+          done();
+        });
+    });
+
+    it('should save image under public/avatars', function(done) {
+      postAvatar()
+        .expect(200)
+        .end(function() {
+          expect(fs.createWriteStream.calledWithMatch(/public\/avatars\/.*\.png/)).to.be.equal(true);
+
+          done();
+        });
+    });
+
+    it('it should name image as `user.login`.ext', function(done) {
+      postAvatar()
+        .expect(200)
+        .end(function(err, res) {
+          expect(fs.createWriteStream.calledWithMatch(
+            new RegExp(res.body.login+'\\.png')
+          )).to.be.equal(true);
+
+          done();
+        });
+    });
+
+    it('should update users profile with new image link', function(done) {
+      postAvatar()
+        .expect(200)
+        .end(function() {
+          db.collection('users').findOne({_id: mongojs.ObjectId(user._id)}, function(err, doc) {
+            expect(doc.avatar).to.not.equal(user.avatar);
+            expect(doc.avatar).to.match(/\/avatars\//);
+
+            done();
+          });
+        });
+    });
+
+    it('should return error on fail', function(done) {
+      avatarStream.willFail();
+
+      postAvatar()
+        .expect(502)
+        .expect('{"error":"Unexpected error with avatar upload"}')
+        .end(done);
     });
   });
 });
