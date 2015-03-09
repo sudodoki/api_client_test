@@ -34,6 +34,11 @@ var stripOut = function (user) {
   } catch(e) {
     copy = {};
   }
+
+  if (copy.avatar && copy.avatar.indexOf('/') === 0) {
+    copy.avatar = server.url + copy.avatar;
+  }
+
   delete copy.password;
   delete copy.is_published;
   return copy;
@@ -148,10 +153,11 @@ server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
   db.collection('users').findAndModify({
     query: { _id: req.user._id},
     update: userUpdate,
+    'new': true,
   }, function(err, doc, lastErrorObject) {
     if (err) { return handleDbError(err, res); }
     req.log.info({doc: doc}, 'USER_ME_UPDATE');
-    res.send(200, doc);
+    res.send(200, stripOut(doc));
   });
 });
 
@@ -168,11 +174,13 @@ server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next) 
   source.on('end', function() {
     db.collection('users').findAndModify({
       query: { _id: req.user._id},
-      update: {$set: {avatar: server.url + '/avatars/' + filename}},
+      update: {$set: {avatar: '/avatars/' + filename}},
+      'new': true,
     }, function(err, doc, lastErrorObject) {
       if (err) { handleDbError(err, res); }
       req.log.info({doc: doc}, 'AVA_UPDATE_END');
-      res.send(200, doc);
+
+      res.send(200, stripOut(doc));
     });
   });
   source.on('error', function(err) {

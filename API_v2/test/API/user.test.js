@@ -133,9 +133,11 @@ describe('/user: authorized', function() {
       authRequest('/user/me', 'post')
         .send({name: expected})
         .expect(200)
-        .end(function() {
+        .end(function(err, res) {
           db.collection('users').findOne({_id: db.ObjectId(user._id)}, function(err, doc) {
             expect(doc.name).to.equal(expected);
+            expect(res.body.name).to.equal(expected);
+
             done();
           });
         });
@@ -237,10 +239,13 @@ describe('/user: authorized', function() {
     it('should update users profile with new image link', function(done) {
       postAvatar()
         .expect(200)
-        .end(function() {
+        .end(function(err, res) {
           db.collection('users').findOne({_id: db.ObjectId(user._id)}, function(err, doc) {
             expect(doc.avatar).to.not.equal(user.avatar);
-            expect(doc.avatar).to.match(/\/avatars\//);
+            expect(doc.avatar).to.match(/^\/avatars\//);
+
+            expect(res.body.avatar).to.match(/^http/);
+            expect(res.body.avatar).to.contain(doc.avatar);
 
             done();
           });
