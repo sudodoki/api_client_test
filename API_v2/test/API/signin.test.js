@@ -24,6 +24,7 @@ describe('POST ' + endPoint, function() {
 
   beforeEach(function(done) {
     user = {
+      _id: db.ObjectId(),
       login: 'kitty',
       password: '***'
     };
@@ -37,7 +38,7 @@ describe('POST ' + endPoint, function() {
     request(app)
       .post(endPoint)
       .send()
-      .expect(400)
+      .expect(422)
       .expect(/"error"/)
       .end(done);
   });
@@ -48,19 +49,17 @@ describe('POST ' + endPoint, function() {
     request(app)
       .post(endPoint)
       .send(user)
-      .expect(403)
-      .expect(/Wrong login or password/)
+      .expect(401)
       .end(done);
   });
 
-  it('should not accept wrong password', function(done) {
+  it('should not user that not exists', function(done) {
     user.login = 'doggie';
 
     request(app)
       .post(endPoint)
       .send(user)
-      .expect(403)
-      .expect(/Wrong login or password/)
+      .expect(401)
       .end(done);
   });
 
@@ -71,5 +70,20 @@ describe('POST ' + endPoint, function() {
       .expect(200)
       .expect(/"token":"[^"]+"/)
       .end(done);
+  });
+
+  it('should save token to db', function(done) {
+    request(app)
+      .post(endPoint)
+      .send(user)
+      .expect(200)
+      .end(function() {
+        db.collection('users').findOne({_id: db.ObjectId(user._id)}, function(err, doc) {
+          expect(doc.token).to.have.length(16);
+          expect(doc._id.toString()).to.be.equal(user._id.toString());
+
+          done();
+        });
+      });
   });
 });

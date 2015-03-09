@@ -86,6 +86,7 @@ var fakeUsers = [
 
 fakeUsers = fakeUsers.map(function(item) {
   item._id = db.ObjectId();
+  item.token = db.ObjectId().toString();
   return item;
 });
 
@@ -94,6 +95,7 @@ var publicUsersList = JSON.parse(JSON.stringify(fakeUsers)).filter(function(item
 }).map(function(item) {
   delete item.is_published;
   delete item.password;
+  delete item.token;
 
   return item;
 });

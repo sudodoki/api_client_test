@@ -24,8 +24,7 @@ var server = restify.createServer({
 });
 
 var CORSHandler = require('./middlewares').CORSHanlder;
-var forAuthorized = require('./middlewares').forAuthorized;
-var setUser = require('./middlewares').setUser;
+var passport = require('./middlewares').passport;
 
 var stripOut = function (user) {
   var copy;
@@ -41,14 +40,18 @@ var stripOut = function (user) {
 
   delete copy.password;
   delete copy.is_published;
+  delete copy.token;
   return copy;
 };
 
 server
   .use(CORSHandler)
+  .use(passport.initialize())
   .use(restify.fullResponse())
   .pre(restify.pre.sanitizePath())
   .use(restify.bodyParser({keepExtensions: true}));
+
+var forAuthorized = passport.authenticate('token', {session: false});
 
 server.get(/\/avatars\/?.*/, restify.serveStatic({
   directory: './public'
@@ -81,15 +84,15 @@ server.get('/version', function(req, res, next) {
 
 server.post('/signin', function (req, res, next) {
   var user = req.params;
-  if (!user.login && !user.password) { res.send(400, {error: 'Please specify both login & password'}); }
-  db.collection('users').findOne({login: user.login, password: user.password}, function (err, userDoc) {
-    if (err) { return handleDbError(err, res); }
-    if (!userDoc) {
-      return res.send (403, { error: 'Wrong login or password, or even both!'});
-    }
-    req.log.info({userDoc: userDoc}, 'SIGNIN');
-    return res.send(200, { status: 'good to go', token: userDoc._id});
-  });
+
+  if (!user.login && !user.password) {
+    return res.send(422, {error: 'Please specify both login & password'});
+  }
+
+  next();
+}, passport.authenticate('local', {session: false}), function(req, res) {
+  req.log.info({user: req.user}, 'SIGNIN');
+  res.send(200, {status: 'good to go', token: req.user.token});
 });
 
 server.post('/signup', function (req, res, next) {
@@ -134,7 +137,7 @@ server.get('/user', function (req, res, next) {
   });
 });
 
-server.get('/user/me', forAuthorized, setUser, function (req, res, next) {
+server.get('/user/me', forAuthorized, function (req, res, next) {
   return res.send(200, req.user);
 });
 
@@ -148,7 +151,7 @@ server.get('/user/:id', forAuthorized, function (req, res, next) {
   });
 });
 
-server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
+server.post('/user/me', forAuthorized, function (req, res, next) {
   var userUpdate = { $set: req.params };
   db.collection('users').findAndModify({
     query: { _id: req.user._id},
@@ -161,7 +164,7 @@ server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
   });
 });
 
-server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next) {
+server.post('/user/me/avatar', forAuthorized, function(req, res, next) {
   if (!req.files || !req.files.avatar) {
     return res.send(422, {errors: [{avatar: 'No file was uploaded'}]});
   }

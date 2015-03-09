@@ -51,29 +51,18 @@ function hasNoField(field) {
 describe('/user: authorized', function() {
   function basicAuthTest(endPoint, method) {
     method = method || 'get';
-    it('should return 401 for when no token', function(done) {
+    it('should return 401 for empty token', function(done) {
       request(app)
         [method](endPoint)
         .expect(401)
-        .end(done);
-    });
-
-    it('should should not accept token in wrong format', function(done) {
-      // error caused by using of mongojs.ObjectId() on id in wrong format
-
-      request(app)
-        [method](endPoint)
-        .set('secret-token', 'wrong token')
-        .expect(500)
         .end(done);
     });
 
     it('should return 401 when wrong token', function(done) {
       request(app)
         [method](endPoint)
-        .set('secret-token', 'zxcvbnmasdfg')
+        .set('secret-token', 'wrong token')
         .expect(401)
-        .expect('{"error":"Need to be logged in"}')
         .end(done);
     });
   }
@@ -83,7 +72,7 @@ describe('/user: authorized', function() {
 
     return request(app)
           [method](uri)
-          .set('secret-token', user._id);
+          .set('secret-token', user.token);
   }
 
   beforeEach(usersFixture.resetDb);
