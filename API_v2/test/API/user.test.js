@@ -5,70 +5,21 @@ const chai = require('chai');
 const expect = chai.expect;
 var exceptValidationError = require('./utils/exceptValidationError');
 
-// TODO: probably we should create some registry and move db, logger etc initislisation there
-// in order to avoid of duplication
-process.env.NODE_ENV = 'test';
-var mongojs = require('mongojs');
-var nconfInstance = require(root + 'nconf-wrapper');
-var db = mongojs(nconfInstance.get('dbName'));
-
 const app = require(root + 'index');
+var db = require(root + 'services/db');
 
-var userList = require(root + 'scripts/fixtures');
-userList = JSON.parse(JSON.stringify(userList));
-userList = userList.map(function(item, index) {
-  item._id = mongojs.ObjectId();
-  return item;
-});
-
-var publicUserList = JSON.parse(JSON.stringify(userList));
-publicUserList = publicUserList.filter(function(item) {
-  return item.is_published;
-}).map(function(item) {
-  delete item.is_published;
-  delete item.password;
-
-  return item;
-});
-
-// user for testing auth
-var user = JSON.parse(JSON.stringify(userList[0]));
-var publicUser = JSON.parse(JSON.stringify(publicUserList[0]));
-var privateUser = JSON.parse(JSON.stringify(userList.filter(function(item) {
-  return !item.is_published;
-})[0]));
-
-function resetDb(done) {
-  db.collection('users').drop(function() {
-    db.collection('users').insert(userList, done);
-  });
-}
-
-function authRequest(uri, method) {
-  method = method || 'get';
-
-  return request(app)
-        [method](uri)
-        .set('secret-token', user._id);
-}
-
-function hasNoField(field) {
-  return function(res) {
-    if (res.body.some(function(item) {return item[field];})) {
-      return 'Expected no '+field+', but get ' . item[field];
-    }
-  };
-}
-
+var usersFixture = require(root + 'test/fixtures/users');
+var user = usersFixture.user;
+var publicUser = usersFixture.publicUser;
 
 describe('GET /user', function() {
-  beforeEach(resetDb);
+  beforeEach(usersFixture.resetDb);
 
   it('should return only published users', function(done) {
     request(app)
       .get('/user')
       .expect(200)
-      .expect(publicUserList)
+      .expect(usersFixture.publicUsersList)
       .end(done);
   });
 
@@ -89,6 +40,14 @@ describe('GET /user', function() {
   });
 });
 
+function hasNoField(field) {
+  return function(res) {
+    if (res.body.some(function(item) {return item[field];})) {
+      return 'Expected no '+field+', but get ' . item[field];
+    }
+  };
+}
+
 describe('/user: authorized', function() {
   function basicAuthTest(endPoint, method) {
     method = method || 'get';
@@ -100,7 +59,7 @@ describe('/user: authorized', function() {
     });
 
     it('should should not accept token in wrong format', function(done) {
-      // error caused by using of mongojs.ObjectId()
+      // error caused by using of mongojs.ObjectId() on id in wrong format
 
       request(app)
         [method](endPoint)
@@ -119,7 +78,15 @@ describe('/user: authorized', function() {
     });
   }
 
-  beforeEach(resetDb);
+  function authRequest(uri, method) {
+    method = method || 'get';
+
+    return request(app)
+          [method](uri)
+          .set('secret-token', user._id);
+  }
+
+  beforeEach(usersFixture.resetDb);
 
   describe('GET /user/me', function() {
     basicAuthTest('/user/me');
@@ -143,7 +110,7 @@ describe('/user: authorized', function() {
     });
 
     it('should not return non-public profiles', function(done) {
-      authRequest('/user/' + privateUser._id)
+      authRequest('/user/' + usersFixture.privateUser._id)
         .expect(404)
         .expect('{"error":"User does not exist"}')
         .end(done);
@@ -167,7 +134,7 @@ describe('/user: authorized', function() {
         .send({name: expected})
         .expect(200)
         .end(function() {
-          db.collection('users').findOne({_id: mongojs.ObjectId(user._id)}, function(err, doc) {
+          db.collection('users').findOne({_id: db.ObjectId(user._id)}, function(err, doc) {
             expect(doc.name).to.equal(expected);
             done();
           });
@@ -271,7 +238,7 @@ describe('/user: authorized', function() {
       postAvatar()
         .expect(200)
         .end(function() {
-          db.collection('users').findOne({_id: mongojs.ObjectId(user._id)}, function(err, doc) {
+          db.collection('users').findOne({_id: db.ObjectId(user._id)}, function(err, doc) {
             expect(doc.avatar).to.not.equal(user.avatar);
             expect(doc.avatar).to.match(/\/avatars\//);
 

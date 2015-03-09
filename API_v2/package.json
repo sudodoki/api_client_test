@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "mocha --reporter=nyan --recursive --watch",
+    "dev": "NODE_ENV=test mocha --reporter=nyan --recursive --watch",
     "seed": "node scripts/seed.js",
     "test": "NODE_ENV=test mocha --reporter=spec --recursive"
   },

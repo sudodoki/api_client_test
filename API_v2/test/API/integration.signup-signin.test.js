@@ -1,21 +1,15 @@
 /**
  * This test checks that the user registered through /signup can login throught /signin
  */
+const root = '../../';
 
 const request = require('supertest');
 const chai = require('chai');
 const expect = chai.expect;
 
-process.env.NODE_ENV = 'test';
 
-const root = '../../';
 const app = require(root + 'index');
-
-// TODO: probably we should create some registry and move db, logger etc initislisation there
-// in order to avoid of duplication
-var mongojs = require('mongojs');
-var nconfInstance = require(root + 'nconf-wrapper');
-var db = mongojs(nconfInstance.get('dbName'));
+var db = require(root + 'services/db');
 
 describe('signup-signin integration', function() {
   beforeEach(function(done) {

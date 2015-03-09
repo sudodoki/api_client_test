@@ -1,4 +1,4 @@
-module.exports = function (_) {
+module.exports = function () {
   return function(req, res, next) {
     res.header('Access-Control-Allow-Credentials', true);
     res.header('Allow', 'GET, HEAD, POST, DELETE');

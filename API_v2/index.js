@@ -1,7 +1,6 @@
 var restify = require('restify'),
     fs      = require('fs'),
     path    = require('path'),
-    mongojs = require('mongojs'),
     pkg     = require('./package.json'),
     nconfInstance = require('./nconf-wrapper');
 
@@ -17,8 +16,7 @@ var log = new Logger.createLogger({
 });
 log.level(nconfInstance.get('loglevel'));
 
-
-var db = mongojs(nconfInstance.get('dbName'));
+var db = require('./services/db');
 
 var server = restify.createServer({
   name: appName,
@@ -138,7 +136,7 @@ server.get('/user/me', forAuthorized, setUser, function (req, res, next) {
 server.get('/user/:id', forAuthorized, function (req, res, next) {
   var id = req.params.id;
 
-  db.collection('users').findOne({ _id: mongojs.ObjectId(id), is_published: true}, function(err, doc) {
+  db.collection('users').findOne({ _id: db.ObjectId(id), is_published: true}, function(err, doc) {
     if (err) { return handleDbError(err, res); }
     if (!doc) {return res.send(404, {error: 'User does not exist'}); }
     return res.send(200, stripOut(doc));
