@@ -11,7 +11,7 @@ var endPoint = '/signin';
 
 
 describe('GET ' + endPoint, function() {
-  it('should return 404', function(done) {
+  it('should return 204 No Content', function(done) {
     request(app)
       .get(endPoint)
       .expect(204)
@@ -53,7 +53,7 @@ describe('POST ' + endPoint, function() {
       .end(done);
   });
 
-  it('should not user that not exists', function(done) {
+  it('should not login user that not exists', function(done) {
     user.login = 'doggie';
 
     request(app)
