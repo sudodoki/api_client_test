@@ -1,7 +1,6 @@
 var restify = require('restify'),
     fs      = require('fs'),
     path    = require('path'),
-    mongojs = require('mongojs'),
     pkg     = require('./package.json'),
     nconfInstance = require('./nconf-wrapper');
 
@@ -15,10 +14,9 @@ var log = new Logger.createLogger({
       req: Logger.stdSerializers.req
   }
 });
-log.level(nconfInstance.get('loglevel'))
+log.level(nconfInstance.get('loglevel'));
 
-
-var db = mongojs(nconfInstance.get('dbName'));
+var db = require('./services/db');
 
 var server = restify.createServer({
   name: appName,
@@ -26,8 +24,7 @@ var server = restify.createServer({
 });
 
 var CORSHandler = require('./middlewares').CORSHanlder;
-var forAuthorized = require('./middlewares').forAuthorized;
-var setUser = require('./middlewares').setUser;
+var passport = require('./middlewares').passport;
 
 var stripOut = function (user) {
   var copy;
@@ -36,16 +33,25 @@ var stripOut = function (user) {
   } catch(e) {
     copy = {};
   }
+
+  if (copy.avatar && copy.avatar.indexOf('/') === 0) {
+    copy.avatar = server.url + copy.avatar;
+  }
+
   delete copy.password;
   delete copy.is_published;
+  delete copy.token;
   return copy;
 };
 
 server
   .use(CORSHandler)
+  .use(passport.initialize())
   .use(restify.fullResponse())
   .pre(restify.pre.sanitizePath())
   .use(restify.bodyParser({keepExtensions: true}));
+
+var forAuthorized = passport.authenticate('token', {session: false});
 
 server.get(/\/avatars\/?.*/, restify.serveStatic({
   directory: './public'
@@ -63,8 +69,8 @@ server.on('MethodNotAllowed', function(req, res, cb){
   });
 });
 
-server.pre(function (request, response, next) {
-    request.log.debug({ req: request }, 'REQUEST');
+server.pre(function (req, response, next) {
+    req.log.debug({ req: req }, 'REQUEST');
     next();
 });
 
@@ -78,31 +84,31 @@ server.get('/version', function(req, res, next) {
 
 server.post('/signin', function (req, res, next) {
   var user = req.params;
-  if (!user.login && !user.password) { res.send(400, {error: 'Please specify both login & password'}); }
-  db.collection('users').findOne({login: user.login, password: user.password}, function (err, userDoc) {
-    if (err) { return res.send (500, JSON.stringify({ error: 'Database error:' + (err.message || 'unknown error') })); }
-    if (!userDoc) {
-      return res.send (403, { error: 'Wrong login or password, or even both!'});
-    }
-    request.log.info({userDoc: userDoc}, 'SIGNIN');
-    return res.send(200, { status: 'good to go', token: userDoc._id});
-  });
+
+  if (!user.login && !user.password) {
+    return res.send(422, {error: 'Please specify both login & password'});
+  }
+
+  next();
+}, passport.authenticate('local', {session: false}), function(req, res) {
+  req.log.info({user: req.user}, 'SIGNIN');
+  res.send(200, {status: 'good to go', token: req.user.token});
 });
 
 server.post('/signup', function (req, res, next) {
   var errors = [],
       user = req.params;
   if (!user.login) {
-    errors.push({login: "Login shouldn't be empty"});
+    errors.push({login: 'Login shouldn\'t be empty'});
   }
   if (!user.password) {
-    errors.push({password: "Use at least some password"});
+    errors.push({password: 'Use at least some password'});
   }
   if (!(user.password && user.passwordConfirmation && user.password === user.passwordConfirmation)) {
     errors.push({passwordConfirmation: 'Should match password'});
   }
   db.collection('users').find({login: user.login}, function (err, userDoc) {
-    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') }); }
+    if (err) { return handleDbError(err, res); }
     if (userDoc.length > 0) {
       errors.push({login: 'This login is already taken, sorry'});
     }
@@ -114,8 +120,8 @@ server.post('/signup', function (req, res, next) {
         is_published: false,
         email: user.email
       }, function (err, userDoc) {
-        if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') }); }
-        request.log.info({userDoc: userDoc}, 'SIGNUP');
+        if (err) { return handleDbError(err, res); }
+        req.log.info({userDoc: userDoc}, 'SIGNUP');
         res.send(200, { status: 'New and shiny account for you!', token: userDoc._id});
       });
     } else {
@@ -125,57 +131,70 @@ server.post('/signup', function (req, res, next) {
 });
 
 server.get('/user', function (req, res, next) {
-  db.collection('users').find({is_published: "true"}, function (err, docs) {
-    if (err) { return res.send (500, { error: 'Database error:' + (err.message || 'unknown error') }); }
+  db.collection('users').find({is_published: true}, function (err, docs) {
+    if (err) { return handleDbError(err, res); }
     res.send(docs.map(stripOut));
   });
 });
 
+server.get('/user/me', forAuthorized, function (req, res, next) {
+  return res.send(200, req.user);
+});
+
 server.get('/user/:id', forAuthorized, function (req, res, next) {
-  db.collection('users').findOne({ _id: mongojs.ObjectId(req.headers['secret-token']), is_published: "true"}, function(err, doc) {
-    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') }); }
-    if (!doc) {return res.send(404, 'User does not exist'); }
+  var id = req.params.id;
+
+  db.collection('users').findOne({ _id: db.ObjectId(id), is_published: true}, function(err, doc) {
+    if (err) { return handleDbError(err, res); }
+    if (!doc) {return res.send(404, {error: 'User does not exist'}); }
     return res.send(200, stripOut(doc));
   });
 });
 
-server.get('/user/me', forAuthorized, setUser, function (req, res, next) {
-  return res.send(200, req.user);
-});
-
-server.post('/user/me', forAuthorized, setUser, function (req, res, next) {
+server.post('/user/me', forAuthorized, function (req, res, next) {
   var userUpdate = { $set: req.params };
   db.collection('users').findAndModify({
     query: { _id: req.user._id},
     update: userUpdate,
+    'new': true,
   }, function(err, doc, lastErrorObject) {
-    if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') }); }
-    request.log.info({doc: doc}, 'USER_ME_UPDATE');
-    res.send(200, doc);
+    if (err) { return handleDbError(err, res); }
+    req.log.info({doc: doc}, 'USER_ME_UPDATE');
+    res.send(200, stripOut(doc));
   });
 });
 
-server.post('/user/me/avatar', forAuthorized, setUser, function(req, res, next){
-  request.log.info({path: req.files.avatar.path}, 'AVA_UPDATE_START');
+server.post('/user/me/avatar', forAuthorized, function(req, res, next) {
+  if (!req.files || !req.files.avatar) {
+    return res.send(422, {errors: [{avatar: 'No file was uploaded'}]});
+  }
+  req.log.info({path: req.files.avatar.path}, 'AVA_UPDATE_START');
   var extension = path.extname(req.files.avatar.name);
-  var filename = req.user.login + '.' + extension;
+  var filename = req.user.login + extension;
   var source = fs.createReadStream(req.files.avatar.path);
-  var dest = fs.createWriteStream('public/' + filename);
+  var dest = fs.createWriteStream('public/avatars/' + filename);
   source.pipe(dest);
   source.on('end', function() {
     db.collection('users').findAndModify({
       query: { _id: req.user._id},
-      update: {$set: {avatar: server.url + '/avatars/' + filename}},
+      update: {$set: {avatar: '/avatars/' + filename}},
+      'new': true,
     }, function(err, doc, lastErrorObject) {
-      if (err) { return res.send(500, { error: 'Database error:' + (err.message || 'unknown error') }); }
-      if (!doc) {return res.send(404, { error: 'User does not exist'}); }
-      request.log.info({doc: doc}, 'AVA_UPDATE_END');
-      res.send(200, doc);
+      if (err) { handleDbError(err, res); }
+      req.log.info({doc: doc}, 'AVA_UPDATE_END');
+
+      res.send(200, stripOut(doc));
     });
   });
   source.on('error', function(err) {
     res.send(502, {error: 'Unexpected error with avatar upload'});
   });
 });
+
+function handleDbError(err, res) {
+  return res.send(500, JSON.stringify({
+    error: 'Database error:' + (err.message || 'unknown error')
+  }));
+}
 
 module.exports = server;

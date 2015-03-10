@@ -8,10 +8,10 @@ API SPEC
 	- # TOKEN AUTHORIZATION
 	+ GET  /user/me
 		have info on current user
-	+ GET  /users/:id
+	+ GET  /user/:id
 		see info on selected users
-	+ POST  /users/me
+	+ POST  /user/me
 		update info on current user
-	+ POST /users/me/avatar
+	+ POST /user/me/avatar
 		update current user's avatar
 
