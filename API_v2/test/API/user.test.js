@@ -171,7 +171,6 @@ describe('/user: authorized', function() {
       // we can set our spies only after supertest finishes with image attachments
       sinon.stub(fs, 'createWriteStream');
       sinon.stub(fs, 'createReadStream').returns(avatarStream);
-
       return req;
     }
 
@@ -188,7 +187,8 @@ describe('/user: authorized', function() {
         .end(function() {
           // we have only one file in request, so it is enough to check that
           // it was read from tmp dir
-          expect(fs.createReadStream.calledWithMatch(/\/tmp\/.*\.png/)).to.be.equal(true);
+          var tempPngFileRegExp = RegExp((process.env.TMPDIR || '/tmp' ) + '.*\.png')
+          expect(fs.createReadStream.getCall(0).args[0]).to.match(tempPngFileRegExp);
 
           done();
         });
