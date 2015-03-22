@@ -1,3 +1,4 @@
 {
-  "host": "168.0.0.12"
+  "host": "api.sudodoki.name",
+  "port": "1337"
 }
