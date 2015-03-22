@@ -1,4 +1,5 @@
 {
+  "name": "production-spa-api",
   "host": "api.sudodoki.name",
   "port": "1337"
 }
