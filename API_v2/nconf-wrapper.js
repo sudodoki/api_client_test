@@ -1,9 +1,10 @@
 var nconf = require('nconf');
 var env = process.env.NODE_ENV || 'development';
+var path = require('path');
 nconf
   .argv()
   .env()
-  .file('./config/' + env +'.json')
+  .file(path.join(__dirname, 'config', env + '.json'))
   .defaults({
     loglevel: 'info',
     appName: 'spa-api',
